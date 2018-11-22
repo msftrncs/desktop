@@ -153,13 +153,17 @@ import {
   parse as parseShell,
   Shell,
 } from '../shells'
-import { ILaunchStats, StatsStore } from '../stats'
+import {
+  ILaunchStats,
+  StatsStore,
+  markUsageStatsNoteSeen,
+  hasSeenUsageStatsNote,
+} from '../stats'
 import { hasShownWelcomeFlow, markWelcomeFlowComplete } from '../welcome'
 import { getWindowState, WindowState } from '../window-state'
 import { TypedBaseStore } from './base-store'
 import { AheadBehindUpdater } from './helpers/ahead-behind-updater'
 import {
-  enableRepoInfoIndicators,
   enableMergeConflictDetection,
   enableMergeConflictsDialog,
 } from '../feature-flag'
@@ -1964,10 +1968,6 @@ export class AppStore extends TypedBaseStore<IAppState> {
   private async refreshIndicatorsForRepositories(
     repositories: ReadonlyArray<Repository>
   ): Promise<void> {
-    if (!enableRepoInfoIndicators()) {
-      return
-    }
-
     const startTime = performance && performance.now ? performance.now() : null
 
     for (const repo of repositories) {
@@ -3033,7 +3033,6 @@ export class AppStore extends TypedBaseStore<IAppState> {
 
   public _endWelcomeFlow(): Promise<void> {
     this.showWelcomeFlow = false
-
     this.emitUpdate()
 
     markWelcomeFlowComplete()
@@ -3242,10 +3241,17 @@ export class AppStore extends TypedBaseStore<IAppState> {
   }
 
   /** Set whether the user has opted out of stats reporting. */
-  public async setStatsOptOut(optOut: boolean): Promise<void> {
-    await this.statsStore.setOptOut(optOut)
+  public async setStatsOptOut(
+    optOut: boolean,
+    userViewedPrompt: boolean
+  ): Promise<void> {
+    await this.statsStore.setOptOut(optOut, userViewedPrompt)
 
     this.emitUpdate()
+  }
+
+  public markUsageStatsNoteSeen() {
+    markUsageStatsNoteSeen()
   }
 
   public _setConfirmRepositoryRemovalSetting(
@@ -3328,6 +3334,12 @@ export class AppStore extends TypedBaseStore<IAppState> {
   }
 
   public _reportStats() {
+    // ensure the user has seen and acknowledged the current usage stats setting
+    if (!this.showWelcomeFlow && !hasSeenUsageStatsNote()) {
+      this._showPopup({ type: PopupType.UsageReportingChanges })
+      return Promise.resolve()
+    }
+
     return this.statsStore.reportStats(this.accounts, this.repositories)
   }
 
