@@ -20,6 +20,12 @@ export class MissingRepository extends React.Component<
   public render() {
     const buttons = new Array<JSX.Element>()
     buttons.push(
+      <Button key="refresh" onClick={this.refresh}>
+        Refresh
+      </Button>
+    )
+
+    buttons.push(
       <Button key="locate" onClick={this.locate} type="submit">
         Locate…
       </Button>
@@ -57,6 +63,10 @@ export class MissingRepository extends React.Component<
   private canCloneAgain() {
     const gitHubRepository = this.props.repository.gitHubRepository
     return gitHubRepository && gitHubRepository.cloneURL
+  }
+
+  private refresh = () => {
+    this.props.dispatcher.refreshRepository(this.props.repository)
   }
 
   private remove = () => {
