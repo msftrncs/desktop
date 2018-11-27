@@ -12,6 +12,7 @@ import { ButtonGroup } from '../lib/button-group'
 import { Dialog, DialogError, DialogFooter } from '../dialog'
 import { NoRemote } from './no-remote'
 import { readGitIgnoreAtRoot } from '../../lib/git'
+import { FetchType } from '../../models/fetch'
 
 interface IRepositorySettingsProps {
   readonly dispatcher: Dispatcher
@@ -172,6 +173,10 @@ export class RepositorySettings extends React.Component<
             this.props.repository,
             this.props.remote.name,
             this.state.remote.url
+          )
+          this.props.dispatcher.fetch(
+            this.props.repository,
+            FetchType.UserInitiatedTask
           )
         } catch (e) {
           log.error(
