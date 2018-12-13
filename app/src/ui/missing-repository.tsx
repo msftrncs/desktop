@@ -18,6 +18,10 @@ export class MissingRepository extends React.Component<
   IMissingRepositoryProps,
   {}
 > {
+  private checkingAgainTimeElapsed: boolean = true
+  private checkingAgainRefreshCompleted: boolean = true
+  private checkingTimer: number | null = null
+
   public render() {
     const buttons = new Array<JSX.Element>()
     buttons.push(
@@ -47,12 +51,22 @@ export class MissingRepository extends React.Component<
           <div className="details">
             It was last seen at{' '}
             <span className="path">{this.props.repository.path}</span>.{' '}
-            <LinkButton onClick={this.checkAgain}>Check&nbsp;again.</LinkButton>
+            {this.renderCheckAgainText()}
           </div>
         </div>
 
         <Row>{buttons}</Row>
       </UiView>
+    )
+  }
+
+  // determine whether to render the 'check again', or 'checking...' text
+  private renderCheckAgainText() {
+    return this.checkingAgainRefreshCompleted &&
+      this.checkingAgainTimeElapsed ? (
+      <LinkButton onClick={this.checkAgain}>Check&nbsp;again.</LinkButton>
+    ) : (
+      <span>Checking...</span>
     )
   }
 
@@ -62,7 +76,13 @@ export class MissingRepository extends React.Component<
   }
 
   private checkAgain = () => {
+    this.clearCheckingTimer()
+    this.checkingAgainRefreshCompleted = false
+    this.checkingAgainTimeElapsed = false
+    this.checkingTimer = window.setTimeout(this.checkingAgainTimerElapsed, 1000)
     this.props.dispatcher.refreshRepository(this.props.repository)
+    this.checkingAgainRefreshCompleted = true
+    this.forceUpdate()
   }
 
   private remove = () => {
@@ -91,6 +111,23 @@ export class MissingRepository extends React.Component<
       )
     } catch (error) {
       this.props.dispatcher.postError(error)
+    }
+  }
+
+  public componentWillUnmount() {
+    this.clearCheckingTimer()
+  }
+
+  private checkingAgainTimerElapsed = () => {
+    this.checkingAgainTimeElapsed = true
+    this.clearCheckingTimer()
+    this.forceUpdate()
+  }
+
+  private clearCheckingTimer() {
+    if (this.checkingTimer) {
+      window.clearTimeout(this.checkingTimer)
+      this.checkingTimer = null
     }
   }
 }
